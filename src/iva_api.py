@@ -6,6 +6,7 @@ from functools import wraps
 import requests
 from requests.auth import HTTPBasicAuth
 
+from utils.imgs import convert_pillow
 
 class Result:
     def __init__(self, status, body, message):
@@ -289,7 +290,11 @@ class APIClient:
         keys = data.get("keys")
         photo_version = data.get("photoVersion")
 
+        if not photo:
+            return False, f"no photo for {person_id}"
+
         photo_bytes = base64.b64decode(photo)
+        photo_bytes = convert_pillow(photo_bytes)
 
         success, result = self.get_face_from_image(photo_bytes)
         if not success:
@@ -327,8 +332,13 @@ class APIClient:
         keys = data.get("keys", [])
         photo_version = data.get("photoVersion")
         person_id = int(data.get("id"))
+        photo = data.get("photo")
 
-        photo_bytes = base64.b64decode(data.get("photo"))
+        if not photo:
+            return False, f"no photo for {person_id}"
+
+        photo_bytes = base64.b64decode(photo)
+        photo_bytes = convert_pillow(photo_bytes)
 
         success, result = self.get_face_from_image(photo_bytes)
         if not success:

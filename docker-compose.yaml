@@ -1,0 +1,18 @@
+version: "3.8"
+
+networks:
+  ivacv:
+    name: ivacv19090
+    driver: bridge
+
+services:
+  sigur_integration:
+    image: sigur_integration:v0.1.0
+    container_name: sigur_integration
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${DATA_STORAGE_PATH}:/storage/ivac
+    networks:
+      ivacv:
+    command: python app.py

@@ -1,17 +1,21 @@
 import json
 import time
+from http import HTTPStatus
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 
 from iva_api import APIClient
+from config import get_config
 
-app = Flask(__name__)
+
+cfg = get_config()
+print(cfg)
 
 client = APIClient(
-    storage_api="localhost:19090/storage/api",
-    search_api="localhost:19090/search_api",
-    dnn_api="localhost:19090/dnnapi/dnnapi",
-    data_storage_path="/home/konstantin/IVACV/data_storage",
+    storage_api=cfg.storage_api,
+    search_api=cfg.search_api,
+    dnn_api=cfg.dnn_api,
+    data_storage_path=cfg.data_storage_path,
 )
 
 
@@ -27,10 +31,11 @@ def get_id(suspect: dict) -> int:
     return id_
 
 
-def init_skud2iva():
+def init_skud2iva() -> dict:
     success, result = client.get_all_suspects_pages(1, 1_000_000)
     if not success:
-        return jsonify({"error": result})
+        print(result)
+        return Response(response=json.dumps({"error": result}), content_type="application/json")
 
     suspects = result.get("body", {}).get("suspects", {}) or {}
 
@@ -39,8 +44,30 @@ def init_skud2iva():
     return data
 
 
-skud2iva = init_skud2iva()
+def create_app():
+    app = Flask(__name__)
 
+    # with app.app_context():
+    #     g.skud2iva = init_skud2iva()
+
+    return app
+
+app = create_app()
+# g.skud2iva = init_skud2iva()
+class StorageInMemory():
+    def __init__(self, data: dict):
+        self.data: dict = data
+
+    def get(self, key, default=None):
+        return self.data.get(key, default)
+
+    def pop(self, key):
+        self.data.pop(key, default)
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+skud2iva = StorageInMemory(init_skud2iva())
 
 @app.get("/getchannels")
 def get_channels():
@@ -109,16 +136,20 @@ def get_persons():
     return jsonify(response)
 
 
+import json
 @app.post("/updateperson")
 def update_person():
-    data = request.json
+    data = json.loads(request.get_data())
 
     person_id = skud2iva.get(int(data.get("id")), None)
     if not person_id:
         success, result = client.create_person(data)
         if not success:
+            if not result:
+                print(result)
+                return "", 200
             print(result)
-            return "", 400
+            return "", 200
 
         iva_id = result.get("body")
         skud2iva[int(data.get("id"))] = iva_id
@@ -128,7 +159,11 @@ def update_person():
 
     success, result = client.update_person(data, str(person_id))
     if not success:
-        return "", 400
+        if not result:
+            print(result)
+            return "", 200
+        print(result)
+        return "", 200
 
     print(f"[INFO]: Updating employee with id {person_id}")
 

@@ -10,8 +10,11 @@ gunicorn = {extras = ["gevent"], version = "*"}
 flask-socketio = "*"
 python-dotenv = "*"
 websocket-client = "*"
+pip = "*"
+install = "*"
+pillow = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.10"

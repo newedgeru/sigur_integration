@@ -1,2 +1,9 @@
 .vscode/
 __pycache__/
+logs/
+
+Pipfile
+Pipfile.lock
+
+*.zip
+*.tar.gz
